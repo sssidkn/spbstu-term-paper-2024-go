@@ -1,0 +1,3 @@
+jiraURL: https://issues.apache.org/jira
+jiraAPI: /rest/api/2
+jiraMaxResults: 50
