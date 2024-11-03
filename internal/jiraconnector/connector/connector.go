@@ -10,24 +10,24 @@ import (
 	"github.com/internal/entities"
 )
 
-func GetProjectData(projectKey string) {
+type JiraConnector struct {
+	HttpClient *http.Client
+}
+
+func NewJiraConnector() *JiraConnector {
+	jiraConnector := new(JiraConnector)
+	jiraConnector.HttpClient = &http.Client{}
+	return jiraConnector
+}
+
+func (jiraConnector *JiraConnector) GetProjectData(projectKey string) {
 	cfg, err := config.NewConfig()
 	if err != nil {
 		panic(err)
 	}
-
-	httpClient := &http.Client{}
-	response, err := httpClient.Get(fmt.Sprintf("%s/%s/search?jql=project=%s&maxResults=%d",
+	project := jiraConnector.doRequest(fmt.Sprintf("%s/%s/search?jql=project=%s&maxResults=%d",
 		cfg.JiraURL, cfg.JiraAPI, projectKey, cfg.JiraMaxResults))
-	defer response.Body.Close()
 
-	if err != nil {
-		panic(err)
-	}
-	project := entities.Project{}
-	project.Key = projectKey
-	data, _ := io.ReadAll(response.Body)
-	_ = json.Unmarshal(data, &project)
 	pageCount := project.IssuesCount / cfg.JiraMaxResults
 
 	if project.IssuesCount%cfg.JiraMaxResults != 0 {
@@ -36,12 +36,22 @@ func GetProjectData(projectKey string) {
 
 	for i := 1; i <= pageCount; i++ {
 		startAt := i * cfg.JiraMaxResults
-		response, err = httpClient.Get(fmt.Sprintf("%s/%s/search?jql=project=%s&startAt=%d&maxResults=%d",
+		data := jiraConnector.doRequest(fmt.Sprintf("%s/%s/search?jql=project=%s&startAt=%d&maxResults=%d",
 			cfg.JiraURL, cfg.JiraAPI, projectKey, startAt, cfg.JiraMaxResults))
-		tempProject := entities.Project{}
-		data, _ = io.ReadAll(response.Body)
-		_ = json.Unmarshal(data, &tempProject)
-		project.Issues = append(project.Issues, tempProject.Issues...)
-		defer response.Body.Close()
+		project.Issues = append(project.Issues, data.Issues...)
 	}
 }
+
+func (jiraConnector *JiraConnector) doRequest(link string) entities.Data {
+	response, err := jiraConnector.HttpClient.Get(link)
+	defer response.Body.Close()
+	if err != nil {
+		panic(err)
+	}
+	issuesData := entities.Data{}
+	data, _ := io.ReadAll(response.Body)
+	_ = json.Unmarshal(data, &issuesData)
+	return issuesData
+}
+
+//TODO: разбить на потоки

@@ -14,7 +14,7 @@ type Config struct {
 
 func NewConfig() (*Config, error) {
 	cfg := &Config{}
-	filePath := "config/giconfig.yaml"
+	filePath := "config/config.yaml"
 
 	data, err := os.ReadFile(filePath)
 	if err != nil {

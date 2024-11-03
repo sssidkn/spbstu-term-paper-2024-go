@@ -1,20 +1,24 @@
 package entities
 
+type Data struct {
+	IssuesCount int     `json:"total"`
+	Issues      []Issue `json:"issues"`
+}
 type Issue struct {
-	Id     string `json:"key,omitempty"`
+	Key    string `json:"key,omitempty"`
 	Fields Fields `json:"fields,omitempty"`
 }
 
 type Project struct {
-	Name        string  `json:"name"`
-	Id          string  `json:"id"`
-	Key         string  `json:"key,omitempty"`
-	IssuesCount int     `json:"total"`
-	Issues      []Issue `json:"issues"`
+	Name string `json:"name"`
+	Id   string `json:"id"`
+	Key  string `json:"key,omitempty"`
 }
 
 type Fields struct {
-	Creator     Creator   `json:"creator"`
+	Project     Project   `json:"project,omitempty"`
+	Creator     Creator   `json:"creator,omitempty"`
+	Assignee    Creator   `json:"reporter,omitempty"`
 	Summary     string    `json:"summary,omitempty"`
 	Description string    `json:"description,omitempty"`
 	Type        IssueType `json:"issuetype,omitempty"`
