@@ -1,0 +1,5 @@
+dbUser: postgres
+dbPassword: postgres
+dbHost: localhost
+dbPort: 8000
+dbName: testdb
