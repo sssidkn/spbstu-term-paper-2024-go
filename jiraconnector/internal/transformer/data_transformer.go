@@ -1,8 +1,8 @@
 package transformer
 
 import (
-	"github.com/internal/dto"
-	"github.com/internal/entities"
+	"github.com/jiraconnector/internal/dto"
+	"github.com/jiraconnector/internal/entities"
 	"time"
 )
 
@@ -23,9 +23,6 @@ func IssueToDTO(issue *entities.Issue) dto.Issue {
 	updatedTime, _ := time.Parse("2006-01-02T15:04:05.999-0700", issue.Fields.UpdatedTime)
 	closedTime, _ := time.Parse("2006-01-02T15:04:05.999-0700", issue.Fields.ClosedTime)
 	return dto.Issue{
-		//ProjectId: ,
-		//AuthorId:,
-		//AssigneeId: ,
 		Key:         issue.Key,
 		CreatedTime: createdTime,
 		UpdatedTime: updatedTime,
