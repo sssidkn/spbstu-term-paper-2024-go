@@ -1,0 +1,4 @@
+jiraUrl: https://issues.apache.org/jira
+jiraApi: /rest/api/2
+issueInOneRequest: 50
+threadCount: 10
