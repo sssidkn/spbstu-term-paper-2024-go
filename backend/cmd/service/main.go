@@ -1,9 +1,10 @@
 package main
 
 import (
+	"log"
+
 	"github.com/backend/database"
 	"github.com/backend/internal/config"
-	"log"
 )
 
 func main() {

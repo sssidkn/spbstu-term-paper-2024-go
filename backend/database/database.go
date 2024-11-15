@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/backend/internal/config"
 	_ "github.com/lib/pq"
 )
