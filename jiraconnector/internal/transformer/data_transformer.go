@@ -1,9 +1,10 @@
 package transformer
 
 import (
-	"github.com/internal/dto"
-	"github.com/internal/entities"
 	"time"
+
+	"github.com/jiraconnector/internal/dto"
+	"github.com/jiraconnector/internal/entities"
 )
 
 func AuthorToDTO(creator *entities.Creator) dto.Author {
@@ -32,7 +33,7 @@ func IssueToDTO(issue *entities.Issue) dto.Issue {
 		ClosedTime:  closedTime,
 		Summary:     issue.Fields.Summary,
 		Description: issue.Fields.Description,
-		Priority:    issue.Fields.Priority,
+		Priority:    issue.Fields.Priority.Name,
 		Status:      issue.Fields.Status.Name,
 		Type:        issue.Fields.Type.Name,
 	}
