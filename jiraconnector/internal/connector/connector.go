@@ -2,13 +2,16 @@ package connector
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/jiraconnector/config"
 	"github.com/jiraconnector/internal/entities"
+	"gopkg.in/yaml.v3"
 )
 
 type JiraConnector struct {
@@ -23,47 +26,70 @@ func NewJiraConnector(cfg *config.Config) *JiraConnector {
 	return jiraConnector
 }
 
-func (jiraConnector *JiraConnector) GetProjectData(projectKey string) {
+func (jiraConnector *JiraConnector) GetProjectData(projectKey string) (*entities.Data, error) {
 	cfg := jiraConnector.Config
-	project := jiraConnector.doRequest(fmt.Sprintf("%s/%s/search?jql=project=%s&maxResults=%d",
+
+	firstRequestData, _ := jiraConnector.doRequest(fmt.Sprintf("%s/%s/search?jql=project=%s&expand=changelog&maxResults=%d",
 		cfg.JiraUrl, cfg.JiraApi, projectKey, cfg.IssueInOneRequest))
 
-	pageCount := project.IssuesCount / cfg.IssueInOneRequest
+	projectData := new(entities.Data)
+	_ = json.Unmarshal(firstRequestData, &projectData)
 
-	if project.IssuesCount%cfg.IssueInOneRequest != 0 {
+	pageCount := projectData.IssuesCount / cfg.IssueInOneRequest
+	if projectData.IssuesCount%cfg.IssueInOneRequest != 0 {
 		pageCount++
 	}
 
 	wg := sync.WaitGroup{}
-	ch := make(chan entities.Data, pageCount)
-	//TODO: ограничение количества горутин
-	for i := 1; i <= pageCount; i++ {
-		wg.Add(1)
-		startAt := i * cfg.IssueInOneRequest
+	requests := make(chan int, pageCount)
+	ch := make(chan []byte, pageCount)
+	wg.Add(pageCount)
+
+	for i := 0; i < cfg.ThreadCount; i++ {
 		go func() {
-			defer wg.Done()
-			data := jiraConnector.doRequest(fmt.Sprintf("%s/%s/search?jql=project=%s&startAt=%d&maxResults=%d",
-				cfg.JiraUrl, cfg.JiraApi, projectKey, startAt, cfg.IssueInOneRequest))
-			ch <- data
+			for startAt := range requests {
+				data, _ := jiraConnector.doRequest(fmt.Sprintf("%s/%s/search?jql=project=%s&expand=changelog&startAt=%d&maxResults=%d",
+					cfg.JiraUrl, cfg.JiraApi, projectKey, startAt, cfg.IssueInOneRequest))
+				//TODO: обработка ошибок/logger
+				ch <- data
+				wg.Done()
+			}
 		}()
 	}
+
+	for i := 1; i <= pageCount; i++ {
+		startAt := i * cfg.IssueInOneRequest
+		requests <- startAt
+	}
+	close(requests)
 	wg.Wait()
 	close(ch)
-	for data := range ch {
-		project.Issues = append(project.Issues, data.Issues...)
+	buffer := make([]byte, 0)
+	var issues []entities.Issue
+	for d := range ch {
+		buffer = append(buffer, d...)
 	}
-	fmt.Println(project.Issues)
+	_ = yaml.Unmarshal(buffer, &issues)
+	projectData.Issues = append(projectData.Issues, issues...)
+	return projectData, nil
 }
 
-func (jiraConnector *JiraConnector) doRequest(link string) entities.Data {
+func (jiraConnector *JiraConnector) doRequest(link string) ([]byte, error) {
+	delay := jiraConnector.Config.Delay
 	response, err := jiraConnector.HttpClient.Get(link)
-	//TODO: задержка между запросами для обхода блокировки JIRA API
 	defer response.Body.Close()
-	if err != nil {
-		panic(err)
+	for {
+		if response.StatusCode != 200 || err != nil {
+			time.Sleep(time.Duration(delay))
+			delay = min(delay*2, jiraConnector.Config.MaxDelay)
+			if delay == jiraConnector.Config.MaxDelay {
+				return nil, errors.New("the waiting time has been exceeded")
+			}
+			response, err = jiraConnector.HttpClient.Get(link)
+		} else {
+			break
+		}
 	}
-	issuesData := entities.Data{}
 	data, _ := io.ReadAll(response.Body)
-	_ = json.Unmarshal(data, &issuesData)
-	return issuesData
+	return data, nil
 }

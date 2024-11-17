@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/jiraconnector/config"
 	"github.com/jiraconnector/internal/connector"
 )
@@ -10,6 +12,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	connector := connector.NewJiraConnector(cfg)
-	connector.GetProjectData("AMQ")
+	jiraConnector := connector.NewJiraConnector(cfg)
+	data, err := jiraConnector.GetProjectData("AMQ")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(data.Issues[0])
 }

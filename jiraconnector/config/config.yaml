@@ -1,4 +1,12 @@
+dbUser: postgres
+dbPassword: admin
+dbHost: host
+dbPort: port
+dbName: name
+
 jiraUrl: https://issues.apache.org/jira
-jiraApi: /rest/api/2
+jiraApi: rest/api/2
 issueInOneRequest: 50
-threadCount: 10
+threadCount: 50
+delay: 5
+maxDelay: 100
